@@ -193,6 +193,9 @@
                         for (let sentence of response["Output"]) {
                             for (let word of sentence) {
                                 let alternativesArr = [];
+                                word["output"] = word["output"].filter(function (item) {
+                                    return item['out'] != '<<UNK>>'
+                                })
                                 for (let w of word["output"])
                                     alternativesArr.push(w["out"])
                                 correctTextContainer.append(createIncorrectWorkContainer(word["output"][0]["out"], alternativesArr));
