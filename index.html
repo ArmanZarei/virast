@@ -26,7 +26,8 @@
             transition-duration: 0.1s;
             padding: 15px 10px;
             direction: rtl;
-            width: 700px;
+            width: 100%;
+            height: 350px;
         }
 
         #user-text:focus {
@@ -89,10 +90,14 @@
         }
 
         #correctex-text {
-            width: 700px;
-            margin: 40px auto;
+            width: 100%;
+            margin-top: 60px;
             text-align: right;
+            border: 2px solid #cfcfd9;
+            border-radius: 7px;
+            padding: 15px 10px;
             direction: rtl;
+            height: 350px;
         }
 
         .d-none {
@@ -106,7 +111,7 @@
 
         span.corrected-word {
             /* background: #E1F0FF; */
-            padding: 0 3px;
+            padding: 0 1px;
             border-radius: 4px;
             cursor: pointer;
         }
@@ -144,16 +149,21 @@
     </style>
 </head>
 <body>
-    <div style="text-align: center;">
-        <form action="" id="user-text-form">
-            <p id="help-text">متن مورد نظر خود را در قسمت پایین نوشته و جهت اصلاح ایرادات دکمه ویرایش را بزنید.</p>
-            <div style="position: relative;">
-                <textarea id="user-text" rows="15"></textarea>
-                <label for="user-text" id="user-text-label">متن</label>
+    <div class="container">
+        <div class="row">
+            <div class="col">
+                <div id="correctex-text"></div>
             </div>
-            <button class="btn btn-style-1 btn-light-primary mr-2">ویرایش<img id="loading-gif" style="vertical-align: middle; margin-left: 7px;" class="d-none" width="15px" src="https://www.clipartmax.com/png/full/219-2195560_loading-image-blue-loading-animated-gif.png" alt=""></button>
-        </form>
-        <div id="correctex-text" >
+            <div class="col">
+                <form action="" id="user-text-form">
+                    <p id="help-text">متن مورد نظر خود را در قسمت پایین نوشته و جهت اصلاح ایرادات دکمه ویرایش را بزنید.</p>
+                    <div style="position: relative;">
+                        <textarea id="user-text" rows="15">با اعلام سخنکوی ذولت، در روز های فردا و پس‌فردا ادارات سراشر کسور تعیل است. علت این تعتیلی گرمای بیش از حد هوا اغلام شده است.</textarea>
+                        <label for="user-text" id="user-text-label">متن</label>
+                    </div>
+                    <button class="btn btn-style-1 btn-light-primary mr-2 float-end">ویرایش<img id="loading-gif" style="vertical-align: middle; margin-left: 7px;" class="d-none" width="15px" src="https://www.clipartmax.com/png/full/219-2195560_loading-image-blue-loading-animated-gif.png" alt=""></button>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -190,22 +200,33 @@
                     success: function (response) {
                         $("#loading-gif").addClass("d-none");
                         correctTextContainer.html("");
-                        for (let sentence of response["Output"]) {
-                            for (let word of sentence) {
-                                let alternativesArr = [];
-                                word["output"] = word["output"].filter(function (item) {
-                                    return item['out'] != '<<UNK>>'
-                                })
-                                for (let w of word["output"])
-                                    alternativesArr.push(w["out"])
-                                correctTextContainer.append(createIncorrectWorkContainer(word["output"][0]["out"], alternativesArr));
 
-                                $(".alternative-word").on('click', function () {
-                                    let word = $(this).text()
-                                    $(this).parent().siblings(".corrected-word").html(word);
-                                })
+                        for (let idx in response["Output"]["final_sentences"]) {
+                            let sentence = response["Output"]["final_sentences"][idx];
+                            let tokens_probs = response["Output"]["tokens_probs"][idx];
+
+                            let ptr = 0;
+                            for (let token_prob of tokens_probs) {
+                                let tokenToSearch = Object.keys(token_prob)[0];
+                                let indexOfToken = sentence.indexOf(tokenToSearch);
+
+                                if (indexOfToken != 0)
+                                    correctTextContainer.append(sentence.slice(0, indexOfToken));
+
+                                let alternativesArr = token_prob[tokenToSearch].map(x => x['token']).filter(x => x != '<<UNK>>');
+                                correctTextContainer.append(createIncorrectWorkContainer(tokenToSearch, alternativesArr));
+                                
+                                sentence = sentence.slice(indexOfToken+tokenToSearch.length)
                             }
+                            if (sentence.length != 0)
+                                correctTextContainer.append(sentence)
+                            correctTextContainer.append(" ")
                         }
+
+                        $(".alternative-word").on('click', function () {
+                            let word = $(this).text()
+                            $(this).parent().siblings(".corrected-word").html(word);
+                        })
                     },
                     error: function (xhr, status, error) {
                         console.log(xhr.responseText)
